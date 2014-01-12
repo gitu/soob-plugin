@@ -3,18 +3,15 @@ package org.jenkinsci.plugins.soob;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.*;
-import hudson.tasks.*;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.MimeMessage;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class LightNotifier extends Notifier {
@@ -43,6 +40,7 @@ public class LightNotifier extends Notifier {
 
     private void sendEmail() {
         String email = getDescriptor().getSoobBoxEmail();
+        String subject = "SET_LED";
         String set_ring_data = "";
 
         Result worst_result = Result.SUCCESS;
@@ -73,16 +71,7 @@ public class LightNotifier extends Notifier {
         text += "{'action':'set_big', 'data':'" + getDescriptor().getColor(worst_result.color) + "'},\n";
         text += "]";
 
-        Session session = Mailer.descriptor().createSession();
-        MimeMessage msg = new MimeMessage(session);
-        try {
-            msg.setSubject("SET_LED");
-            msg.addRecipients(Message.RecipientType.TO, email);
-            msg.setText(text);
-            Transport.send(msg);
-        } catch (MessagingException e) {
-            LOGGER.log(Level.SEVERE, "error while sending set_led message with text = " + text, e);
-        }
+        MailHelper.sendEmail(email, subject, text);
     }
 
     @Override
