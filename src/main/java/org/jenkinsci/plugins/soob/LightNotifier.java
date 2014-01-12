@@ -14,7 +14,6 @@ import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.MimeMessage;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,52 +41,26 @@ public class LightNotifier extends Notifier {
         return true;
     }
 
-    private void printInfo(AbstractBuild build, Launcher launcher, BuildListener listener) {
-
-
-            /*
-        for (TopLevelItem item : Jenkins.getInstance().getItems()) {
-
-            for (Job job : item.getAllJobs()) {
-                Object descr = job.getDescriptorByName("LightNotifier");
-                if (descr instanceof LightNotifier) {
-                    DescriptorImpl descriptor = (DescriptorImpl) descr;
-                    LOGGER.info("job: " + job.getName() + " ring: "
-                            + descriptor.toString());
-                }else
-                {
-                    LOGGER.info("was something else: " + descr);
-                }
-                if (job.getLastCompletedBuild() != null) {
-                    LOGGER.info("    getLastCompletedBuild: "
-                            + job.getLastCompletedBuild().getIconColor());
-                }
-            }
-        }
-*/
-    }
-
     private void sendEmail() {
         String email = getDescriptor().getSoobBoxEmail();
         String set_ring_data = "";
 
         Result worst_result = Result.SUCCESS;
-        for (AbstractProject project : Jenkins.getInstance().getAllItems(AbstractProject.class))
-        {
+        for (AbstractProject project : Jenkins.getInstance().getAllItems(AbstractProject.class)) {
             LightNotifier notifier = (LightNotifier) project.getPublishersList().get(LightNotifier.class);
-            if (notifier!=null && notifier.getSoobRingId().matches("[01]{0,1}[0-9]")) {
+            if (notifier != null && notifier.getSoobRingId().matches("[01]?[0-9]")) {
                 LOGGER.info("job: " + project.getName() + " ring: " + notifier.getSoobRingId());
                 String ringId = notifier.getSoobRingId();
                 AbstractBuild lastBuild = project.getLastBuild();
                 if (lastBuild != null) {
                     if (lastBuild.getResult() != null) {
                         String color = getDescriptor().getColor(lastBuild.getResult().color);
-                        set_ring_data +="" + "'" + ringId + "':'" + color + "',\n";
+                        set_ring_data += "" + "'" + ringId + "':'" + color + "',\n";
                     }
                 }
 
                 Run lastCompletedBuild = project.getLastCompletedBuild();
-                if (lastCompletedBuild != null ) {
+                if (lastCompletedBuild != null) {
                     Result lastCompletedBuildResult = lastCompletedBuild.getResult();
                     if (lastCompletedBuildResult != null && lastCompletedBuildResult.isWorseThan(worst_result)) {
                         worst_result = lastCompletedBuildResult;
@@ -96,8 +69,8 @@ public class LightNotifier extends Notifier {
             }
         }
         String text = "[";
-        text += "{'action':'set_ring','data':{\n"+set_ring_data+"}},\n";
-        text += "{'action':'set_big', 'data':'"+getDescriptor().getColor(worst_result.color)+"'},\n";
+        text += "{'action':'set_ring','data':{\n" + set_ring_data + "}},\n";
+        text += "{'action':'set_big', 'data':'" + getDescriptor().getColor(worst_result.color) + "'},\n";
         text += "]";
 
         Session session = Mailer.descriptor().createSession();
@@ -108,7 +81,7 @@ public class LightNotifier extends Notifier {
             msg.setText(text);
             Transport.send(msg);
         } catch (MessagingException e) {
-            LOGGER.log(Level.SEVERE, "error while sending set_led message with text = "+text, e);
+            LOGGER.log(Level.SEVERE, "error while sending set_led message with text = " + text, e);
         }
     }
 
@@ -117,17 +90,7 @@ public class LightNotifier extends Notifier {
         return (DescriptorImpl) super.getDescriptor();
     }
 
-    private String truncate(String s, int toLength) {
-        if (s.length() > toLength) {
-            return s.substring(0, toLength);
-        }
-        return s;
-    }
-
-    private boolean isEmpty(String s) {
-        return s == null || s.trim().length() == 0;
-    }
-
+    @SuppressWarnings("UnusedDeclaration")
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
         private String soobBoxEmail;
