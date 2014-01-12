@@ -1,0 +1,5 @@
+<j:jelly xmlns:j="jelly:core">
+	<j:if test="${it.claimed}">
+		<img width="16" height="16"  title="Printed" src="${rootUrl}/plugin/soob-plugin/icons/print.png"/>
+	</j:if>
+</j:jelly>  

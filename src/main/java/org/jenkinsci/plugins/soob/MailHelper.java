@@ -13,6 +13,7 @@ import java.util.logging.Logger;
 public class MailHelper {
     private final static Logger LOGGER = Logger.getLogger(LightNotifier.class
             .getName());
+
     public static void sendEmail(String to, String subject, String text) {
         Session session = Mailer.descriptor().createSession();
         MimeMessage msg = new MimeMessage(session);
