@@ -1,0 +1,35 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:section title="Soob Plugin">
+
+        <f:entry
+            title="Box Email"
+            field="soobBoxEmail">
+            <f:textbox name="soob.soobBoxEmail" />
+        </f:entry>
+
+        <f:entry
+            title="RED"
+            field="soobRED">
+            <f:textbox name="soob.soobRED" />
+        </f:entry>
+
+        <f:entry
+            title="YELLOW"
+            field="soobYELLOW">
+            <f:textbox name="soob.soobYELLOW" />
+        </f:entry>
+
+        <f:entry
+            title="BLUE"
+            field="soobBLUE">
+            <f:textbox name="soob.soobBLUE" />
+        </f:entry>
+
+        <f:entry
+            title="GREY"
+            field="soobGREY">
+            <f:textbox name="soob.soobGREY" />
+        </f:entry>
+
+    </f:section>
+</j:jelly>

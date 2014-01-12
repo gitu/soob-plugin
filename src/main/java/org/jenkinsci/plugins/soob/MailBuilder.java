@@ -1,7 +1,15 @@
 package org.jenkinsci.plugins.soob;
 
+import hudson.model.JobProperty;
+import hudson.model.Jobs;
+import hudson.model.ViewJob;
+import hudson.model.Job;
+import hudson.model.TopLevelItem;
+import hudson.model.View;
 import hudson.tasks.Mailer;
+import hudson.views.ViewJobFilter;
 
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,23 +19,13 @@ import javax.mail.Transport;
 import javax.mail.Message.RecipientType;
 import javax.mail.internet.MimeMessage;
 
+import jenkins.model.Jenkins;
+
 public class MailBuilder {
-    private final static Logger LOGGER = Logger.getLogger(PluginImpl.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(MailBuilder.class
+            .getName());
 
-	public void sendMail(DescriptorImpl descriptor) {
-		 Session session = Mailer.descriptor().createSession();
-	        MimeMessage msg = new MimeMessage(session);
-	        try {
-		        msg.setSubject("SET_LED");
-		        msg.addRecipients(RecipientType.TO, descriptor.getBoxEmail());
-	        
-				msg.setText("[{'action':'set_ring','data':{"
-				   // +"'"+getRingtId()+"':'"+ballcolor.getHtmlBaseColor()+"'}}]" 
-						);
+    public void sendMail() {
 
-	            Transport.send(msg);
-			} catch (MessagingException e) {
-				LOGGER.log(Level.SEVERE, "error while sending set_led message", e);
-			}
-	}
+    }
 }

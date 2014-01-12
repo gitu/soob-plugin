@@ -1,77 +1,232 @@
 package org.jenkinsci.plugins.soob;
 
+import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.*;
 import hudson.tasks.*;
-
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 
-import java.io.IOException;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
+import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
-import javax.mail.Message.RecipientType;
 import javax.mail.Transport;
 import javax.mail.internet.MimeMessage;
-
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LightNotifier extends Notifier {
-    private final static Logger LOGGER = Logger.getLogger(PluginImpl.class.getName());
-	
-
-
-    private final String ringID;
-
+    private final static Logger LOGGER = Logger.getLogger(LightNotifier.class
+            .getName());
+    private final String soobRingId;
 
     @DataBoundConstructor
-    public LightNotifier(String ringID) {
-        this.ringID = ringID;
+    public LightNotifier(String soobRingId) {
+        this.soobRingId = soobRingId;
     }
 
-    public String getRingtId() {
-        return this.ringID;
-    }
-    
-//    @Override
-//    public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-//        final DescriptorImpl descriptor = this.getDescriptor();
-//    	return super.prebuild(build, listener);
-//    }
-
-    @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        BallColor ballcolor = build.getResult().color;
-
-        Session session = Mailer.descriptor().createSession();
-        MimeMessage msg = new MimeMessage(session);
-        try {
-	        msg.setSubject("SET_LED");
-	        msg.addRecipients(RecipientType.TO, getDescriptor().getBoxEmail());
-        
-			msg.setText("[{'action':'set_ring','data':{"+
-			    "'"+getRingtId()+"':'"+ballcolor.getHtmlBaseColor()+"'}}]" );
-
-            Transport.send(msg);
-		} catch (MessagingException e) {
-			LOGGER.log(Level.SEVERE, "error while sending set_led message", e);
-		}
-        return true;
-    }
-
-    @Override
-    public boolean needsToRunAfterFinalized() {
-        return true;
-    }
-
-    @Override
-    public DescriptorImpl getDescriptor() {
-        return (DescriptorImpl)super.getDescriptor();
+    public String getSoobRingId() {
+        return soobRingId;
     }
 
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
     }
 
+    @Override
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+        sendEmail();
+        return true;
+    }
+
+    private void printInfo(AbstractBuild build, Launcher launcher, BuildListener listener) {
+
+
+            /*
+        for (TopLevelItem item : Jenkins.getInstance().getItems()) {
+
+            for (Job job : item.getAllJobs()) {
+                Object descr = job.getDescriptorByName("LightNotifier");
+                if (descr instanceof LightNotifier) {
+                    DescriptorImpl descriptor = (DescriptorImpl) descr;
+                    LOGGER.info("job: " + job.getName() + " ring: "
+                            + descriptor.toString());
+                }else
+                {
+                    LOGGER.info("was something else: " + descr);
+                }
+                if (job.getLastCompletedBuild() != null) {
+                    LOGGER.info("    getLastCompletedBuild: "
+                            + job.getLastCompletedBuild().getIconColor());
+                }
+            }
+        }
+*/
+    }
+
+    private void sendEmail() {
+        String email = getDescriptor().getSoobBoxEmail();
+        String set_ring_data = "";
+
+        Result worst_result = Result.SUCCESS;
+        for (AbstractProject project : Jenkins.getInstance().getAllItems(AbstractProject.class))
+        {
+            LightNotifier notifier = (LightNotifier) project.getPublishersList().get(LightNotifier.class);
+            if (notifier!=null && notifier.getSoobRingId().matches("[01]{0,1}[0-9]")) {
+                LOGGER.info("job: " + project.getName() + " ring: " + notifier.getSoobRingId());
+                String ringId = notifier.getSoobRingId();
+                AbstractBuild lastBuild = project.getLastBuild();
+                if (lastBuild != null) {
+                    if (lastBuild.getResult() != null) {
+                        String color = getDescriptor().getColor(lastBuild.getResult().color);
+                        set_ring_data +="" + "'" + ringId + "':'" + color + "',\n";
+                    }
+                }
+
+                Run lastCompletedBuild = project.getLastCompletedBuild();
+                if (lastCompletedBuild != null ) {
+                    Result lastCompletedBuildResult = lastCompletedBuild.getResult();
+                    if (lastCompletedBuildResult != null && lastCompletedBuildResult.isWorseThan(worst_result)) {
+                        worst_result = lastCompletedBuildResult;
+                    }
+                }
+            }
+        }
+        String text = "[";
+        text += "{'action':'set_ring','data':{\n"+set_ring_data+"}},\n";
+        text += "{'action':'set_big', 'data':'"+getDescriptor().getColor(worst_result.color)+"'},\n";
+        text += "]";
+
+        Session session = Mailer.descriptor().createSession();
+        MimeMessage msg = new MimeMessage(session);
+        try {
+            msg.setSubject("SET_LED");
+            msg.addRecipients(Message.RecipientType.TO, email);
+            msg.setText(text);
+            Transport.send(msg);
+        } catch (MessagingException e) {
+            LOGGER.log(Level.SEVERE, "error while sending set_led message with text = "+text, e);
+        }
+    }
+
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return (DescriptorImpl) super.getDescriptor();
+    }
+
+    private String truncate(String s, int toLength) {
+        if (s.length() > toLength) {
+            return s.substring(0, toLength);
+        }
+        return s;
+    }
+
+    private boolean isEmpty(String s) {
+        return s == null || s.trim().length() == 0;
+    }
+
+    @Extension
+    public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
+        private String soobBoxEmail;
+        private String soobRED;
+        private String soobBLUE;
+        private String soobYELLOW;
+        private String soobGREY;
+
+
+        public DescriptorImpl() {
+            super(LightNotifier.class);
+            load();
+        }
+
+        public String getColor(BallColor ballColor) {
+            switch (ballColor) {
+                case RED:
+                case RED_ANIME:
+                    return soobRED;
+                case YELLOW:
+                case YELLOW_ANIME:
+                    return soobYELLOW;
+                case BLUE:
+                case BLUE_ANIME:
+                    return soobBLUE;
+                case GREY:
+                case GREY_ANIME:
+                case DISABLED:
+                case DISABLED_ANIME:
+                case ABORTED:
+                case ABORTED_ANIME:
+                case NOTBUILT:
+                case NOTBUILT_ANIME:
+                    return soobGREY;
+                default:
+                    return soobGREY;
+            }
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "Soob Light Notifier";
+        }
+
+        @Override
+        public boolean isApplicable(Class<? extends AbstractProject> aClass) {
+            return true;
+        }
+
+        @Override
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+            soobBoxEmail = formData.getString("soobBoxEmail");
+            soobRED = formData.getString("soobRED");
+            soobBLUE = formData.getString("soobBLUE");
+            soobYELLOW = formData.getString("soobYELLOW");
+            soobGREY = formData.getString("soobGREY");
+
+            save();
+            return super.configure(req, formData);
+        }
+
+        public String getSoobBoxEmail() {
+            return soobBoxEmail;
+        }
+
+        public void setSoobBoxEmail(String soobBoxEmail) {
+            this.soobBoxEmail = soobBoxEmail;
+        }
+
+        public String getSoobRED() {
+            return soobRED;
+        }
+
+        public void setSoobRED(String soobRED) {
+            this.soobRED = soobRED;
+        }
+
+        public String getSoobBLUE() {
+            return soobBLUE;
+        }
+
+        public void setSoobBLUE(String soobBLUE) {
+            this.soobBLUE = soobBLUE;
+        }
+
+        public String getSoobYELLOW() {
+            return soobYELLOW;
+        }
+
+        public void setSoobYELLOW(String soobYELLOW) {
+            this.soobYELLOW = soobYELLOW;
+        }
+
+        public String getSoobGREY() {
+            return soobGREY;
+        }
+
+        public void setSoobGREY(String soobGREY) {
+            this.soobGREY = soobGREY;
+        }
+    }
 }
