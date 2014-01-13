@@ -1,11 +1,13 @@
 package org.jenkinsci.plugins.soob;
 
 import hudson.tasks.Mailer;
+import jenkins.model.JenkinsLocationConfiguration;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,6 +20,7 @@ public class MailHelper {
         Session session = Mailer.descriptor().createSession();
         MimeMessage msg = new MimeMessage(session);
         try {
+            msg.setFrom(new InternetAddress(JenkinsLocationConfiguration.get().getAdminAddress()));
             msg.setSubject(subject);
             msg.addRecipients(Message.RecipientType.TO, to);
             msg.setText(text);
