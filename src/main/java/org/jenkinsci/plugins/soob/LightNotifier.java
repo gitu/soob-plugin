@@ -53,7 +53,7 @@ public class LightNotifier extends Notifier {
                 if (lastBuild != null) {
                     if (lastBuild.getResult() != null) {
                         String color = getDescriptor().getColor(lastBuild.getResult().color);
-                        set_ring_data += "" + "'" + ringId + "':'" + color + "',\n";
+                        set_ring_data += (set_ring_data.length()>0?",":"") + "\"" + ringId + "\":\"" + color + "\"\n";
                     }
                 }
 
@@ -67,8 +67,8 @@ public class LightNotifier extends Notifier {
             }
         }
         String text = "[";
-        text += "{'action':'set_ring','data':{\n" + set_ring_data + "}},\n";
-        text += "{'action':'set_big', 'data':'" + getDescriptor().getColor(worst_result.color) + "'},\n";
+        text += "{\"action\":\"set_ring\",\"data\":{\n" + set_ring_data + "}},\n";
+        text += "{\"action\":\"set_big\", \"data\":\"" + getDescriptor().getColor(worst_result.color) + "\"}\n";
         text += "]";
 
         MailHelper.sendEmail(email, subject, text);
